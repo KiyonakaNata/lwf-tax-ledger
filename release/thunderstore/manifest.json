@@ -1,0 +1,9 @@
+{
+  "name": "LwfTaxLedger",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/KiyonakaNata/lwf-tax-ledger",
+  "description": "Adds a Taxation section to the Payslip on the result screen. Lists what each tax took from the run, phase by phase, with a breakdown of the items, resources and value behind every line.",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2305"
+  ]
+}
