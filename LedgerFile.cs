@@ -45,6 +45,10 @@ namespace LwfTaxLedger
                     {
                         sb.Append("res").Append(Sep).Append(kv.Key).Append(Sep).Append(kv.Value).Append('\n');
                     }
+                    foreach (KeyValuePair<string, int> kv in e.LostTags)
+                    {
+                        sb.Append("tag").Append(Sep).Append(kv.Key).Append(Sep).Append(kv.Value).Append('\n');
+                    }
                     foreach (KeyValuePair<string, ItemLoss> kv in e.Items)
                     {
                         ItemLoss loss = kv.Value;
@@ -94,6 +98,9 @@ namespace LwfTaxLedger
                             break;
                         case "res":
                             if (entry != null && f.Length >= 3) { entry.AddLostResource(f[1], Int(f[2])); }
+                            break;
+                        case "tag":
+                            if (entry != null && f.Length >= 3) { entry.AddLostTag(f[1], Int(f[2])); }
                             break;
                         case "item":
                             if (entry == null || f.Length < 3) { break; }

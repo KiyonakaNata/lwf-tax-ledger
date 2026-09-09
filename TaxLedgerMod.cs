@@ -19,7 +19,7 @@ namespace LwfTaxLedger
     {
         internal const string PluginGuid = "kiyonakanata.lwftaxledger";
         internal const string PluginName = "LWF Tax Ledger";
-        internal const string PluginVersion = "1.0.0";
+        internal const string PluginVersion = "1.0.1";
 
         internal static ManualLogSource Log;
         private Harmony _harmony;

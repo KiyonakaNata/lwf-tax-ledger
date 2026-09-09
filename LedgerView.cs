@@ -479,6 +479,19 @@ namespace LwfTaxLedger
                         subFont, subIcon, SubValueColor);
                     breakdown.Add(row.gameObject);
                 }
+
+                // 返済にならないバフ・レリックの減り。現金の欄は「-」にして、
+                // 払った額と読み違えないようにする
+                foreach (KeyValuePair<string, int> kv in e.LostTags)
+                {
+                    RectTransform row = NewRow(rows, TaxLedgerPlugin.Indent.Value, subIcon);
+                    AddIcon(row, TagSprite(kv.Key), kv.Key, subIcon, subFont);
+                    AddFixedText(row, "x" + Format(kv.Value), subFont, SubValueColor);
+                    AddFlex(row);
+                    AddOtherResources(row, NoResources, subFont, subIcon);
+                    AddValue(row, TagSprite(_payTag), _payTag, "-", subFont, subIcon, SubColor);
+                    breakdown.Add(row.gameObject);
+                }
                 MakeExpandable(head, marker, breakdown);
             }
         }
@@ -603,6 +616,9 @@ namespace LwfTaxLedger
             res.TryGetValue(_payTag, out amount);
             return amount;
         }
+
+        /// <summary>資源を持たない行のための空の表（枠の数だけ空きを置くために渡す）。</summary>
+        private static readonly Dictionary<string, int> NoResources = new Dictionary<string, int>();
 
         /// <summary>現金以外の資源を、決まった順・決まった幅で並べる。
         /// 現金はこのあとに置くので、桁が増えても現金の位置は動かない。</summary>

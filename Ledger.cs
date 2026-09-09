@@ -44,6 +44,10 @@ namespace LwfTaxLedger
         // B: 消えた資源（投資課税・損害賠償・特産品税）。tag -> 量
         public readonly Dictionary<string, int> LostResources = new Dictionary<string, int>();
 
+        // C: 減ったバフ・レリック（成果物がタグのレシピを関税などが削ったとき）。tag -> 点
+        // 返済には使えないので、見出しには出さず内訳だけに出す
+        public readonly Dictionary<string, int> LostTags = new Dictionary<string, int>();
+
         // B: 無効になった売却の回数（中央集権）。中身は Items に積む
         public int CancelledSales;
 
@@ -82,12 +86,21 @@ namespace LwfTaxLedger
             LostResources[tag] = cur + amount;
         }
 
+        public void AddLostTag(string tag, int amount)
+        {
+            if (string.IsNullOrEmpty(tag) || tag == "None" || amount == 0) { return; }
+            int cur;
+            LostTags.TryGetValue(tag, out cur);
+            LostTags[tag] = cur + amount;
+        }
+
         public bool IsEmpty
         {
             get
             {
                 return Points == 0 && LostResources.Count == 0 && CancelledSales == 0
-                    && Items.Count == 0 && ExtraHits == 0 && string.IsNullOrEmpty(RateText);
+                    && Items.Count == 0 && LostTags.Count == 0
+                    && ExtraHits == 0 && string.IsNullOrEmpty(RateText);
             }
         }
     }
@@ -146,6 +159,10 @@ namespace LwfTaxLedger
                 if (!string.IsNullOrEmpty(e.RateText)) { sb.Append(" rate=").Append(e.RateText); }
                 if (e.PatronID > 0) { sb.Append(" patron=").Append(e.PatronID); }
                 foreach (KeyValuePair<string, int> kv in e.LostResources)
+                {
+                    sb.Append(' ').Append(kv.Key).Append('=').Append(kv.Value);
+                }
+                foreach (KeyValuePair<string, int> kv in e.LostTags)
                 {
                     sb.Append(' ').Append(kv.Key).Append('=').Append(kv.Value);
                 }
@@ -226,6 +243,14 @@ namespace LwfTaxLedger
                 case "LockRandomPatron":
                     e.PatronID = 8; // Satan（クラフター）
                     FillDummyItems(e, rng);
+                    break;
+                case "ReduceItemCraftResult":
+                    FillDummyItems(e, rng);
+                    // 成果物がバフのレシピも削られる。返済にならないので内訳だけに出る
+                    e.AddLostTag("RelicCobalt", 100 + rng.Next(400));
+                    e.AddLostTag("RelicAmethyst", 50 + rng.Next(300));
+                    e.AddLostTag("RelicRuby", 10 + rng.Next(80));
+                    e.AddLostTag("RelicJade", 5 + rng.Next(60));
                     break;
                 case "HarvestRockPenalty":
                 case "HarvestTreePenalty":

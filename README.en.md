@@ -34,6 +34,7 @@ Click a row for the items, resources and converted value behind it. Click again 
 | Investment Tax, Damages, Specialty Product Tax | Resources lost |
 | Centralization | Sales cancelled, and the items behind them |
 | Sample Provision Order, Tariffs | Crafts lost and their value |
+| The same, on buff recipes | Buff points lost. Shown in the breakdown only, since buffs cannot repay |
 | Mining Tax, Agricultural Tax | Extra hits required |
 | Compulsory Triple Check, Arrest | Crafts lost and their value, from the speed loss |
 | Water Conservation Order | The transport rate it takes away |

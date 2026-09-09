@@ -17,6 +17,7 @@ using Harvestable;
 using Harvestable.HarvestableManagerHelper;
 using Items;
 using Items.Craft;
+using Items.Tag;
 using Items.Delivery;
 using Items.ValueCountSettings;
 using Map.MapObjects.PureClass.FamObjects;
@@ -562,7 +563,26 @@ namespace LwfTaxLedger
                 return;
             }
             TagCount tagCount = recipe.Result as TagCount;
-            if (tagCount != null) { entry.AddLostResource(tagCount.TagID, lostCount); }
+            if (tagCount != null)
+            {
+                // 成果物がタグのレシピ。資源なら返済に効くので見出しの「消えた資源」に、
+                // バフ・レリックは返済にならないので内訳に回す。
+                // 分けないと、刻印を何種類も削られた行が横に伸びて枠からはみ出す
+                if (IsPayableTag(tagCount.TagID)) { entry.AddLostResource(tagCount.TagID, lostCount); }
+                else { entry.AddLostTag(tagCount.TagID, lostCount); }
+            }
+        }
+
+        /// <summary>返済に使える資源のタグか（現金・建材などと、特別任務の返済金）。
+        /// 引けなかったときは資源として扱う（今までの出し方に倒す）。</summary>
+        private static bool IsPayableTag(string tagID)
+        {
+            try
+            {
+                ItemTag.Type type = TagParamGetter.GetType(tagID);
+                return type == ItemTag.Type.Resource || type == ItemTag.Type.Currency;
+            }
+            catch (Exception) { return true; }
         }
 
         private static int Clamp3(int slot)
@@ -683,7 +703,7 @@ namespace LwfTaxLedger
                 if (e.EffectID != effectID) { continue; }
                 // 率は掛けた時点で入るので、拾えた印にはしない。実測だけを見る
                 if (e.Points != 0 || e.ExtraHits != 0 || e.CancelledSales != 0
-                    || e.LostResources.Count > 0 || e.Items.Count > 0)
+                    || e.LostResources.Count > 0 || e.Items.Count > 0 || e.LostTags.Count > 0)
                 {
                     return "o";
                 }
