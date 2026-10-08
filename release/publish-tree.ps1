@@ -2,7 +2,7 @@
 #
 #   powershell -ExecutionPolicy Bypass -File release\publish-tree.ps1 [-Dest D:\Wiki\lwf-tax-ledger]
 #
-# 出すもの:  ソース 6 本・build.ps1、release\ の README.md / README.en.md・img\（en\ 含む）・
+# 出すもの:  ソース 6 本・build.ps1、release\ の README.md / README.en.md / CHANGELOG.md・CHANGELOG.ja.md・img\（en\ 含む）・
 #            release.ps1・zip-README.txt・publish-tree.ps1・thunderstore\
 # 出さないもの:
 #   - README.md（開発用。解析パイプラインの記述と手元のパスを含む）
@@ -36,6 +36,8 @@ foreach ($f in @('TaxLedgerMod.cs','Ledger.cs','LedgerView.cs','TaxHooks.cs','De
 # 文書
 CopyTo (Join-Path $here 'README.md') 'README.md'
 CopyTo (Join-Path $here 'README.en.md') 'README.en.md'
+CopyTo (Join-Path $here 'CHANGELOG.md') 'CHANGELOG.md'
+CopyTo (Join-Path $here 'CHANGELOG.ja.md') 'CHANGELOG.ja.md'
 
 # 画像
 $img = Join-Path $Dest 'img'

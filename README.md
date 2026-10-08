@@ -106,7 +106,7 @@
 
 | | |
 |---|---|
-| Lazy Witch's Factory | **ver 0.27.0** で動作確認 |
+| Lazy Witch's Factory | **ver 0.29.1** で動作確認 |
 | BepInEx | **5.4.23.5** で確認（5.4.x なら動くはず） |
 | 難易度 | **Inferno**（課税があるのはここだけ） |
 

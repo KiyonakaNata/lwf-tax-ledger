@@ -105,7 +105,7 @@ Specialty Product Tax, Sample Provision Order, Agricultural Tax
 
 | | |
 |---|---|
-| Lazy Witch's Factory | Tested on **ver 0.27.0** |
+| Lazy Witch's Factory | Tested on **ver 0.29.1** |
 | BepInEx | Tested on **5.4.23.5** (5.4.x should work) |
 | Difficulty | **Inferno** |
 

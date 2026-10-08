@@ -1,6 +1,6 @@
 # LWF Tax Ledger
 
-Adds a Taxation section to the Payslip in **Lazy Witch's Factory** (tested on ver 0.27.0).
+Adds a Taxation section to the Payslip in **Lazy Witch's Factory** (tested on ver 0.29.1).
 
 - The result screen lists what each tax took from the run, phase by phase
 - Shown on Inferno

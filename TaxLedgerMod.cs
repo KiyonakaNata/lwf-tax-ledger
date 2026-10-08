@@ -19,7 +19,7 @@ namespace LwfTaxLedger
     {
         internal const string PluginGuid = "kiyonakanata.lwftaxledger";
         internal const string PluginName = "LWF Tax Ledger";
-        internal const string PluginVersion = "1.0.1";
+        internal const string PluginVersion = "1.0.2";
 
         internal static ManualLogSource Log;
         private Harmony _harmony;
@@ -52,10 +52,28 @@ namespace LwfTaxLedger
         private int _dummySet;
         private float _nextResultPoll;
 
+        // 本体は 0.29.1 から、起動中に例外が出るとゲームごと起動を止める（エラー画面）。
+        // 本体の更新でパッチ先が消えても MOD だけ止まって起動は通るよう、全部を受け止める。
+        // 一部の課税だけ拾う台帳は数字が狂うので、失敗したら当てた分も全部外す
         private void Awake()
         {
             Log = Logger;
+            try
+            {
+                Boot();
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("[boot] " + PluginName + " " + PluginVersion
+                    + " disabled (the game version may have changed): " + e);
+                try { if (_harmony != null) { _harmony.UnpatchSelf(); } }
+                catch (Exception e2) { Log.LogWarning("[boot] unpatch failed: " + e2.Message); }
+                enabled = false;
+            }
+        }
 
+        private void Boot()
+        {
             Enabled = Config.Bind("1. General", "Enabled", true, "");
 
             FontSize = Config.Bind("2. Layout", "Font size", 24, "");

@@ -1,6 +1,6 @@
 # LWF Tax Ledger
 
-**Lazy Witch's Factory** の給与明細に課税欄を足す（ver 0.27.0 で動作確認）
+**Lazy Witch's Factory** の給与明細に課税欄を足す（ver 0.29.1 で動作確認）
 
 - 結果画面に、その回の課税で失ったものを期ごとに出す
 - Inferno で表示
