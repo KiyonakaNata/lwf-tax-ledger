@@ -1,8 +1,10 @@
-// 課税の実データを拾う割り込み。
+﻿// 課税の実データを拾う割り込み。
 //
 // いまの範囲:
 //   A. 固定費用の点数（人頭税・固定資産税・消費税）… 本体が持つ確定値をそのまま読む
 //   B. 確率で消える収入（投資課税・損害賠償・特産品税・中央集権）… 消えた瞬間に量を積む
+//      0.30 の新課税: 源泉徴収（資源）・保管手数料／盗難保険料（現金）・もう結構（売却の無効）は同じ形、
+//      徴発は開始時の差分、印紙税は率だけ
 //   C. 製作数の差分（サンプル提供命令・関税）と遅れの換算（トリプルチェック・逮捕）、
 //      増えた打数（鉱産税・農産税）、下げられた率（節水令）
 
@@ -203,30 +205,34 @@ namespace LwfTaxLedger
         // どの課税がどの期に入ったか
         // ---------------------------------------------------------------
 
+        /// <summary>ITaxEffect を実装する型（抽象クラスも含む）のうち、その名前のメソッドを
+        /// 自分で持つものを全部返す。派生が基底に任せているぶんは基底側で 1 回だけ掛かる。
+        /// 0.30 で保管手数料・盗難保険料の Apply/Remove が抽象の CashPriceCutTaxEffect に移り、
+        /// 具象だけを見ていた 1.0.x では取りこぼした。</summary>
+        private static List<MethodBase> DeclaredOnTaxEffects(string name, Type[] args)
+        {
+            List<MethodBase> found = new List<MethodBase>();
+            Type[] types = typeof(ITaxEffect).Assembly.GetTypes();
+            for (int i = 0; i < types.Length; i++)
+            {
+                Type t = types[i];
+                if (t.IsInterface) { continue; }
+                if (!typeof(ITaxEffect).IsAssignableFrom(t)) { continue; }
+                // DeclaredOnly で探す。AccessTools.DeclaredMethod は見つからないたびに警告を吐く
+                MethodInfo m = t.GetMethod(name,
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly,
+                    null, args, null);
+                if (m != null && !m.IsAbstract) { found.Add(m); }
+            }
+            return found;
+        }
+
         [HarmonyPatch]
         private static class ApplyPatch
         {
             private static IEnumerable<MethodBase> TargetMethods()
             {
-                List<MethodBase> found = new List<MethodBase>();
-                Type[] types = typeof(ITaxEffect).Assembly.GetTypes();
-                for (int i = 0; i < types.Length; i++)
-                {
-                    Type t = types[i];
-                    if (t.IsInterface || t.IsAbstract) { continue; }
-                    if (!typeof(ITaxEffect).IsAssignableFrom(t)) { continue; }
-                    MethodInfo m = AccessTools.DeclaredMethod(t, "Apply",
-                        new Type[] { typeof(TaxEffectContext), typeof(int) });
-                    // 実体を持たない（基底に任せている）ものは基底側で拾う
-                    if (m != null) { found.Add(m); }
-                }
-                MethodInfo b1 = AccessTools.DeclaredMethod(typeof(RecipeTaxEffectBase), "Apply",
-                    new Type[] { typeof(TaxEffectContext), typeof(int) });
-                if (b1 != null) { found.Add(b1); }
-                MethodInfo b2 = AccessTools.DeclaredMethod(typeof(RepaymentLoseCashPenaltyTaxEffectBase), "Apply",
-                    new Type[] { typeof(TaxEffectContext), typeof(int) });
-                if (b2 != null) { found.Add(b2); }
-                return found;
+                return DeclaredOnTaxEffects("Apply", new Type[] { typeof(TaxEffectContext), typeof(int) });
             }
 
             private static void Postfix(object __instance, TaxEffectContext context, int slotIndex)
@@ -244,7 +250,7 @@ namespace LwfTaxLedger
                 // 率でしか示せないものは、本体の表示用の値をそのまま持つ。
                 // 節水令のほか、逮捕は使い魔の種類によって効き先が製作とは限らない
                 // （マモン = 運搬役なら運搬が遅くなるだけで、製作数は 1 個も減らない）
-                if (id == "SlowConveyor" || id == "LockRandomPatron")
+                if (id == "SlowConveyor" || id == "LockRandomPatron" || id == "ReducePactRarity")
                 {
                     try { entry.RateText = effect.GetValueText(slotIndex); }
                     catch (Exception) { }
@@ -278,23 +284,7 @@ namespace LwfTaxLedger
         {
             private static IEnumerable<MethodBase> TargetMethods()
             {
-                List<MethodBase> found = new List<MethodBase>();
-                Type[] types = typeof(ITaxEffect).Assembly.GetTypes();
-                for (int i = 0; i < types.Length; i++)
-                {
-                    Type t = types[i];
-                    if (t.IsInterface || t.IsAbstract) { continue; }
-                    if (!typeof(ITaxEffect).IsAssignableFrom(t)) { continue; }
-                    MethodInfo m = AccessTools.DeclaredMethod(t, "Remove", new Type[] { typeof(TaxEffectContext) });
-                    if (m != null) { found.Add(m); }
-                }
-                MethodInfo b1 = AccessTools.DeclaredMethod(typeof(RecipeTaxEffectBase), "Remove",
-                    new Type[] { typeof(TaxEffectContext) });
-                if (b1 != null) { found.Add(b1); }
-                MethodInfo b2 = AccessTools.DeclaredMethod(typeof(RepaymentLoseCashPenaltyTaxEffectBase), "Remove",
-                    new Type[] { typeof(TaxEffectContext) });
-                if (b2 != null) { found.Add(b2); }
-                return found;
+                return DeclaredOnTaxEffects("Remove", new Type[] { typeof(TaxEffectContext) });
             }
 
             private static void Postfix(object __instance)
@@ -388,15 +378,17 @@ namespace LwfTaxLedger
             private static void Postfix(bool __result, string tagID, int actualDelta,
                 StatsCashReason statsCashReason)
             {
-                // 検算の分母は、本体が対象にしている「バフ・レリックの現金収入」だけ。
-                // 売却の入金まで数えると率が薄まって意味が無くなる
-                if (tagID == "Cash" && actualDelta > 0 && statsCashReason == StatsCashReason.BuffRelicIncome)
+                // 検算の分母は、本体が対象にしている「バフ・レリックの収入」だけ。
+                // 売却の入金まで数えると率が薄まって意味が無くなる。
+                // 現金は投資課税、現金以外は源泉徴収（0.30）が消す
+                string id = tagID == "Cash" ? "CutBuffCash" : "CutBuffResource";
+                if (actualDelta > 0 && statsCashReason == StatsCashReason.BuffRelicIncome)
                 {
-                    Count("CutBuffCash", __result && !_patronCutHit);
+                    Count(id, __result && !_patronCutHit);
                 }
                 // 中で損害賠償が当たった分は、そちらで既に積んである
                 if (!__result || _patronCutHit) { return; }
-                Entry("CutBuffCash").AddLostResource(tagID, actualDelta);
+                Entry(id).AddLostResource(tagID, actualDelta);
             }
         }
 
@@ -422,6 +414,79 @@ namespace LwfTaxLedger
                 TaxEntry entry = Entry("Centralization");
                 entry.CancelledSales++;
                 AddItemLoss(entry, _depositItemID, _depositCount);
+            }
+        }
+
+        /// <summary>もう結構（0.30）: 累計売却個数の上位にいるアイテムの売却が無効になる。
+        /// DepositInternal の冒頭で判定されるので、控えたアイテムがそのまま消えた分。</summary>
+        [HarmonyPatch(typeof(TaxSaleRestrictionService), "ShouldCancelSale")]
+        private static class SaleRestrictionPatch
+        {
+            private static void Postfix(bool __result, string itemID)
+            {
+                Count("BlockTopSales", __result);
+                if (!__result || string.IsNullOrEmpty(itemID)) { return; }
+                TaxEntry entry = Entry("BlockTopSales");
+                entry.CancelledSales++;
+                AddItemLoss(entry, itemID, _depositCount > 0 ? _depositCount : 1);
+            }
+        }
+
+        /// <summary>保管手数料・盗難保険料（0.30）: 現金価格が閾値の外にあるアイテムの売却で現金が入らない。
+        /// 本体は価格の枠ごとに判定するので、消えた現金は「枠の価格 × 売った個数」。
+        /// 売却自体は通り他の資源は入るので、アイテムの内訳には現金の分だけを積む（中央集権と同じ見た目）</summary>
+        [HarmonyPatch(typeof(TaxCashPriceCutService), "ShouldCancelSaleTag")]
+        private static class CashPriceCutPatch
+        {
+            private static void Postfix(bool __result, string originalTag, int price, string recordedTag)
+            {
+                if (originalTag != "Cash" || recordedTag != "Cash") { return; }
+                string id = IsActive("LowPriceCashCut") ? "LowPriceCashCut"
+                    : (IsActive("HighPriceCashCut") ? "HighPriceCashCut" : null);
+                if (id == null) { return; }
+                Count(id, __result);
+                if (!__result || price <= 0) { return; }
+                int count = _depositCount > 0 ? _depositCount : 1;
+                if (_depositItemID != null)
+                {
+                    Entry(id).GetItem(_depositItemID).Add(count, "Cash", price, "None", 0, "None", 0);
+                }
+                else
+                {
+                    Entry(id).AddLostResource("Cash", price * count);
+                }
+            }
+        }
+
+        /// <summary>徴発（0.30）: 適用の瞬間に、現金以外の資源が目標値まで削られる。
+        /// 前後の残高の差が失った量。</summary>
+        [HarmonyPatch(typeof(ResourceDeficitTaxEffect), "Apply")]
+        private static class ResourceDeficitPatch
+        {
+            private static void Prefix(TaxEffectContext context, out Dictionary<string, int> __state)
+            {
+                __state = null;
+                ResourceTagsRecorder recorder = context != null ? context.ResourceTagsRecorder : null;
+                if (recorder == null) { return; }
+                __state = new Dictionary<string, int>();
+                foreach (string tag in RecordableTags.COMMON)
+                {
+                    try { __state[tag] = recorder.GetCount(tag); }
+                    catch (Exception) { }
+                }
+            }
+
+            private static void Postfix(TaxEffectContext context, Dictionary<string, int> __state)
+            {
+                ResourceTagsRecorder recorder = context != null ? context.ResourceTagsRecorder : null;
+                if (recorder == null || __state == null) { return; }
+                foreach (KeyValuePair<string, int> kv in __state)
+                {
+                    int after;
+                    try { after = recorder.GetCount(kv.Key); }
+                    catch (Exception) { continue; }
+                    if (after < kv.Value) { Entry("ResourceDeficit").AddLostResource(kv.Key, kv.Value - after); }
+                }
             }
         }
 
@@ -751,6 +816,18 @@ namespace LwfTaxLedger
                     return "+" + TaxEffectParameters.LAND_COUNT_PENALTIES_PER_LAND[i] + " per land";
                 case "OrderExecutePenalty":
                     return "+" + TaxEffectParameters.ORDER_EXECUTE_PENALTIES_PER_ORDER[i] + " per order";
+                case "CutBuffResource":
+                    return TaxEffectParameters.CUT_BUFF_RESOURCE_CHANCE_PERCENTS[i] + "% of buff resources";
+                case "LowPriceCashCut":
+                    return "no cash at price <= " + TaxEffectParameters.LOW_PRICE_CASH_THRESHOLDS[i];
+                case "HighPriceCashCut":
+                    return "no cash at price >= " + TaxEffectParameters.HIGH_PRICE_CASH_THRESHOLDS[i];
+                case "BlockTopSales":
+                    return "top " + TaxEffectParameters.BLOCK_TOP_SALES_RANK_COUNTS[i] + " blocked";
+                case "ResourceDeficit":
+                    return "balance -> " + TaxEffectParameters.RESOURCE_DEFICIT_TARGET_BALANCES[i];
+                case "ReducePactRarity":
+                    return "-" + TaxEffectParameters.PACT_RARITY_REDUCTION_POINTS[i] + "% rare pacts";
             }
             return "-";
         }

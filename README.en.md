@@ -38,6 +38,11 @@ Click a row for the items, resources and converted value behind it. Click again 
 | Mining Tax, Agricultural Tax | Extra hits required |
 | Compulsory Triple Check, Arrest | Crafts lost and their value, from the speed loss |
 | Water Conservation Order | The transport rate it takes away |
+| Withholding Tax | Resources lost |
+| Storage Fee, Theft Insurance Premium | Cash not paid, with the item breakdown |
+| That's Enough | Sales cancelled, and the items behind them |
+| Requisition | Resources taken when it starts (one breakdown row per resource; the total row shows only the repayment resource) |
+| Stamp Duty | The rate it takes away |
 
 ![Fixed cost](img/en/ledger-fixed-cost.png)
 
@@ -105,7 +110,7 @@ Specialty Product Tax, Sample Provision Order, Agricultural Tax
 
 | | |
 |---|---|
-| Lazy Witch's Factory | Tested on **ver 0.29.1** |
+| Lazy Witch's Factory | Tested on **ver 0.30.1** |
 | BepInEx | Tested on **5.4.23.5** (5.4.x should work) |
 | Difficulty | **Inferno** |
 

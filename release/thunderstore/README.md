@@ -1,6 +1,6 @@
 # LWF Tax Ledger
 
-Adds a Taxation section to the Payslip in **Lazy Witch's Factory** (tested on ver 0.29.1).
+Adds a Taxation section to the Payslip in **Lazy Witch's Factory** (tested on ver 0.30.1).
 
 - The result screen lists what each tax took from the run, phase by phase
 - Shown on Inferno
@@ -29,6 +29,11 @@ Adds a Taxation section to the Payslip in **Lazy Witch's Factory** (tested on ve
 | Mining Tax, Agricultural Tax | Extra hits required |
 | Compulsory Triple Check, Arrest | Crafts lost and their value, from the speed loss |
 | Water Conservation Order | The transport rate it takes away |
+| Withholding Tax | Resources lost |
+| Storage Fee, Theft Insurance Premium | Cash not paid, with the item breakdown |
+| That's Enough | Sales cancelled, and the items behind them |
+| Requisition | Resources taken when it starts (one breakdown row per resource; the total row shows only the repayment resource) |
+| Stamp Duty | The rate it takes away |
 
 ![Fixed cost](https://raw.githubusercontent.com/KiyonakaNata/lwf-tax-ledger/main/img/en/ledger-fixed-cost.png)
 

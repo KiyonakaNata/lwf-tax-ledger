@@ -1,4 +1,4 @@
-// LWF Tax Ledger — 課税で失ったものの累計を結果画面の「生産目標」枠に出す
+﻿// LWF Tax Ledger — 課税で失ったものの累計を結果画面の「生産目標」枠に出す
 //
 // いまは骨組み。台帳はダミーデータで埋め、開発用の鍵で枠の複製を出して見た目を決める段階。
 // 課税の実データを数える Harmony の割り込みはこのあと足す。
@@ -19,7 +19,7 @@ namespace LwfTaxLedger
     {
         internal const string PluginGuid = "kiyonakanata.lwftaxledger";
         internal const string PluginName = "LWF Tax Ledger";
-        internal const string PluginVersion = "1.0.2";
+        internal const string PluginVersion = "1.1.0";
 
         internal static ManualLogSource Log;
         private Harmony _harmony;
@@ -105,7 +105,8 @@ namespace LwfTaxLedger
             DevTaxes = Config.Bind("9. Dev", "Taxes", "",
                 "LongerCraft, SampleProvision, SlowConveyor, HarvestRockPenalty, HarvestTreePenalty, "
                 + "ReduceTagCraftResult, ReduceItemCraftResult, CutLocalTag, CutBuffCash, Centralization, "
-                + "FamCountPenalty, LandCountPenalty, LockRandomPatron, NoTagRandomPatron, OrderExecutePenalty");
+                + "FamCountPenalty, LandCountPenalty, LockRandomPatron, NoTagRandomPatron, OrderExecutePenalty, "
+                + "ReducePactRarity, CutBuffResource, ResourceDeficit, BlockTopSales, LowPriceCashCut, HighPriceCashCut");
             _previewKeyCode = ParseKey(PreviewKey.Value, Key.F7);
             _dumpKeyCode = ParseKey(DumpKey.Value, Key.F5);
 

@@ -1,4 +1,4 @@
-// 台帳（データ）。ゲームにも BepInEx にも依存しない。
+﻿// 台帳（データ）。ゲームにも BepInEx にも依存しない。
 //
 // シフト 1 回分の「課税で失ったもの」を、期（slot）と課税（EffectID）ごとに持つ。
 // 数え方は課税の性質で分かれる（README の A/B/C）。
@@ -191,6 +191,9 @@ namespace LwfTaxLedger
             new string[] { "OrderExecutePenalty", "Centralization", "LockRandomPatron" },
             new string[] { "CutLocalTag", "SampleProvision", "HarvestTreePenalty" },
             new string[] { "NoTagRandomPatron", "ReduceTagCraftResult", "FamCountPenalty" },
+            // 0.30 の 6 種
+            new string[] { "BlockTopSales", "LowPriceCashCut", "ResourceDeficit" },
+            new string[] { "CutBuffResource", "ReducePactRarity", "HighPriceCashCut" },
         };
 
         public static int DummySetCount { get { return DummySets.Length; } }
@@ -234,6 +237,42 @@ namespace LwfTaxLedger
                     break;
                 case "CutLocalTag":
                     e.AddLostResource("Luxury", 2000 + rng.Next(40000));
+                    break;
+                case "CutBuffResource":
+                    // バフが出す資源すべてが対象＝実物は数種類並ぶ
+                    e.AddLostResource("Construction", 2000 + rng.Next(20000));
+                    e.AddLostResource("Chemical", 3000 + rng.Next(30000));
+                    e.AddLostResource("Magic", 1000 + rng.Next(20000));
+                    e.AddLostResource("Fuel", 4000 + rng.Next(40000));
+                    break;
+                case "LowPriceCashCut":
+                    // 安いアイテムの現金だけが消える（他の資源は入る）。内訳は現金の分だけ
+                    AddDummyItem(e, rng, "Iron", 200, "Cash", 1, "None", 0, "None", 0);
+                    AddDummyItem(e, rng, "Lemonade", 60, "Cash", 5, "None", 0, "None", 0);
+                    AddDummyItem(e, rng, "Lye", 45, "Cash", 1, "None", 0, "None", 0);
+                    AddDummyItem(e, rng, "Compost", 120, "Cash", 1, "None", 0, "None", 0);
+                    break;
+                case "HighPriceCashCut":
+                    AddDummyItem(e, rng, "Gold", 40, "Cash", 10, "None", 0, "None", 0);
+                    AddDummyItem(e, rng, "Pickaxe", 8, "Cash", 10, "None", 0, "None", 0);
+                    AddDummyItem(e, rng, "Adamantite", 6, "Cash", 500, "None", 0, "None", 0);
+                    break;
+                case "ResourceDeficit":
+                    // 現金以外の全資源が目標値まで削られる＝実物は 7 つ並ぶ
+                    e.AddLostResource("Construction", 20000 + rng.Next(60000));
+                    e.AddLostResource("Grocery", 1000 + rng.Next(20000));
+                    e.AddLostResource("Luxury", 5000 + rng.Next(30000));
+                    e.AddLostResource("Fertilizer", 2000 + rng.Next(20000));
+                    e.AddLostResource("Chemical", 3000 + rng.Next(40000));
+                    e.AddLostResource("Magic", 1000 + rng.Next(30000));
+                    e.AddLostResource("Fuel", 10000 + rng.Next(60000));
+                    break;
+                case "BlockTopSales":
+                    FillDummyItems(e, rng);
+                    foreach (KeyValuePair<string, ItemLoss> kv in e.Items) { e.CancelledSales += kv.Value.Count; }
+                    break;
+                case "ReducePactRarity":
+                    e.RateText = "-20%";
                     break;
                 case "Centralization":
                     FillDummyItems(e, rng);

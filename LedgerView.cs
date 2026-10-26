@@ -1,4 +1,4 @@
-// 結果画面の「生産目標」枠（AchievementBody）に台帳を描く。
+﻿// 結果画面の「生産目標」枠（AchievementBody）に台帳を描く。
 //
 // 本番: 結果画面が上がったら、枠の中の "Under Developent" 文字を隠し、
 //       枠の Scroll View に行を積む。
@@ -492,6 +492,23 @@ namespace LwfTaxLedger
                     AddValue(row, TagSprite(_payTag), _payTag, "-", subFont, subIcon, SubColor);
                     breakdown.Add(row.gameObject);
                 }
+
+                // 徴発のように資源が多い課税は、合計行に並べきれない（3 つで右端いっぱい）。
+                // 資源ごとに 1 行ずつ内訳へ落とし、合計行には返済に使う資源の分だけ残す
+                if (ResourcesInBreakdown(e))
+                {
+                    // アイコンと数字は右端にまとめて置く（離すと読めない）。赤字＝失った額。
+                    // 桁は一番大きい額に合わせて揃える（K と素の数が混じると読みにくい）
+                    int maxAbs = 0;
+                    foreach (KeyValuePair<string, int> kv in e.LostResources) { if (kv.Value > maxAbs) { maxAbs = kv.Value; } }
+                    foreach (string tag in LostResourceOrder(e))
+                    {
+                        RectTransform row = NewRow(rows, TaxLedgerPlugin.Indent.Value, subIcon);
+                        AddFlex(row);
+                        AddValue(row, TagSprite(tag), tag, "-" + FormatLike(e.LostResources[tag], maxAbs), subFont, subIcon, ValueColor);
+                        breakdown.Add(row.gameObject);
+                    }
+                }
                 MakeExpandable(head, marker, breakdown);
             }
         }
@@ -548,15 +565,32 @@ namespace LwfTaxLedger
                 AddValue(row, TagSprite(FixedCostTag), FixedCostTag, "+" + Format(e.Points),
                     font, icon, SubValueColor);
             }
-            foreach (KeyValuePair<string, int> kv in e.LostResources)
+            if (ResourcesInBreakdown(e))
             {
-                AddValue(row, TagSprite(kv.Key), kv.Key, "-" + Format(kv.Value), font, icon, ValueColor);
+                // 資源ごとの額は内訳行にある。返済に使う資源が減っていればそれを、
+                // 減っていなければ（徴発・源泉徴収は現金を削らない）全資源の印で合計を出す
+                int pay;
+                e.LostResources.TryGetValue(_payTag, out pay);
+                // 減っていなければ（徴発・源泉徴収は現金を削らない）合計行には何も出さない。
+                // 資源をまとめた額を出すと「全資源がその分減った」ように読めてしまう
+                if (pay != 0)
+                {
+                    AddValue(row, TagSprite(_payTag), _payTag, "-" + Format(pay), font, icon, ValueColor);
+                }
+            }
+            else
+            {
+                foreach (KeyValuePair<string, int> kv in e.LostResources)
+                {
+                    AddValue(row, TagSprite(kv.Key), kv.Key, "-" + Format(kv.Value), font, icon, ValueColor);
+                }
             }
             if (e.CancelledSales != 0)
             {
                 // ゲヘナ以外での売却が消える課税。相手の顔で「何回ゲヘナに流れたか」を示す
-                AddValue(row, SpriteByName(GehennaSmile), null, "x" + Format(e.CancelledSales),
-                    font, icon, ValueColor);
+                // もう結構（0.30）は相手が居ないので顔は出さない
+                Sprite face = e.EffectID == "Centralization" ? SpriteByName(GehennaSmile) : null;
+                AddValue(row, face, null, "x" + Format(e.CancelledSales), font, icon, ValueColor);
             }
             if (e.ExtraHits != 0)
             {
@@ -580,6 +614,29 @@ namespace LwfTaxLedger
             {
                 AddValue(row, null, null, "-", font, icon, SubColor);
             }
+        }
+
+        /// <summary>失った資源を合計行に並べると入りきらないか。資源の枠（既定 2）を超えたら内訳へ。
+        /// 3 つ並べると課税名を詰めても右端いっぱいになる。徴発（現金以外の全資源）と
+        /// 源泉徴収（バフが出す資源すべて）はほぼ常にこちらになる</summary>
+        private static bool ResourcesInBreakdown(TaxEntry e)
+        {
+            return e.LostResources.Count > TaxLedgerPlugin.ResourceColumns.Value;
+        }
+
+        /// <summary>失った資源を決まった順（建材…燃料、最後に現金など）で返す。辞書の順は積んだ順なので揃える</summary>
+        private static List<string> LostResourceOrder(TaxEntry e)
+        {
+            List<string> tags = new List<string>();
+            for (int i = 0; i < ResourceOrder.Length; i++)
+            {
+                if (e.LostResources.ContainsKey(ResourceOrder[i])) { tags.Add(ResourceOrder[i]); }
+            }
+            foreach (KeyValuePair<string, int> kv in e.LostResources)
+            {
+                if (!tags.Contains(kv.Key)) { tags.Add(kv.Key); }
+            }
+            return tags;
         }
 
         private static int TotalPay(TaxEntry e)
@@ -692,6 +749,16 @@ namespace LwfTaxLedger
         }
 
         /// <summary>大きい数は K・M に丸める（桁が伸びると列が崩れるため）。</summary>
+        /// <summary>同じ表の中で桁の書き方を揃える。reference（表の最大値）が K なら小さい値も K で出す</summary>
+        private static string FormatLike(int value, int reference)
+        {
+            int abs = value < 0 ? -value : value;
+            string sign = value < 0 ? "-" : "";
+            if (reference < 10000) { return value.ToString("N0"); }
+            if (reference < 1000000) { return sign + (abs / 1000f).ToString("0.#") + "K"; }
+            return sign + (abs / 1000000f).ToString("0.##") + "M";
+        }
+
         private static string Format(int value)
         {
             int abs = value < 0 ? -value : value;

@@ -77,7 +77,7 @@ Remove
 Delete BepInEx/plugins/LwfTaxLedger.dll
 Delete BepInEx/config/kiyonakanata.lwftaxledger.cfg to drop the settings
 
-Tested with Lazy Witch's Factory ver 0.27.0 / BepInEx 5.4.23.5
+Tested with Lazy Witch's Factory ver 0.30.1 / BepInEx 5.4.23.5
 Unofficial mod, not supported by the developer
 
      https://github.com/KiyonakaNata/lwf-tax-ledger
